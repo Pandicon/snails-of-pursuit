@@ -30,7 +30,7 @@ fn main() {
 	};
 
 	eframe::run_native(
-		"Sine wave visualiser",
+		"Snails of pursuit",
 		native_options,
 		Box::new(|cc| Box::new(application::Application::new(cc, VERSION.to_string()))),
 	);
