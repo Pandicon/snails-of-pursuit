@@ -18,6 +18,25 @@ impl Application {
 			version,
 		}
 	}
+	
+	pub fn step(&mut self) {
+		for i in 0..self.state.positions.len() {
+			let position = self.state.positions[i];
+			if self.state.running && position.length() >= self.state.speed * self.state.timestep {
+				let previous_snail_position = self.state.positions[if i > 0 { i - 1 } else { self.state.positions.len() - 1 }];
+				let direction = (previous_snail_position - position).normalized();
+				let speed = direction * self.state.speed;
+				let new_position = position + speed * self.state.timestep;
+				self.state.previous_positions[i].push(new_position);
+			}
+		}
+		for i in 0..self.state.positions.len() {
+			if self.state.previous_positions[i].is_empty() {
+				continue;
+			}
+			self.state.positions[i] = self.state.previous_positions[i][self.state.previous_positions[i].len() - 1];
+		}
+	}
 
 	pub fn render(&mut self, ctx: &egui::Context) {
 		egui::CentralPanel::default().show(ctx, |ui| {
@@ -26,25 +45,36 @@ impl Application {
 				if run_pause_button.clicked() {
 					self.state.running = !self.state.running;
 				}
+				ui.add_space(10.0);
 
 				let snails_count = self.state.snails_count;
 				ui.add_enabled(!self.state.running, egui::DragValue::new(&mut self.state.snails_count).speed(0.1));
 				ui.label("Snails count");
+				ui.add_space(10.0);
 				
 				ui.add(egui::DragValue::new(&mut self.state.speed).speed(0.01));
 				ui.label("Snails speed");
+				ui.add_space(10.0);
 				
 				let radius = self.state.radius;
 				ui.add_enabled(!self.state.running, egui::DragValue::new(&mut self.state.radius).speed(0.01));
 				ui.label("Circle radius");
+				ui.add_space(10.0);
 				
 				ui.add(egui::DragValue::new(&mut self.state.timestep).speed(0.001));
 				ui.label("Timestep");
 				if self.state.timestep < 0.0 {
 					self.state.timestep = 0.0;
 				}
+				ui.add_space(10.0);
 
-				if self.state.snails_count != snails_count || self.state.radius != radius {
+				ui.add(egui::DragValue::new(&mut self.state.steps_per_frame).speed(0.01));
+				ui.label("Simulation steps per frame");
+				ui.add_space(10.0);
+
+				let reset_button = ui.button("Reset the animation");
+
+				if self.state.snails_count != snails_count || self.state.radius != radius || reset_button.clicked() {
 					self.state.reinitialise();
 				}
 			});
@@ -67,15 +97,7 @@ impl Application {
 			let mut all_lines = vec![];
 			for i in 0..self.state.positions.len() {
 				let colour = crate::COLOURS[i % crate::COLOURS.len()];
-				let position = self.state.positions[i];
 				
-				if self.state.running && position.length() >= self.state.speed * self.state.timestep {
-					let previous_snail_position = self.state.positions[if i > 0 { i - 1 } else { self.state.positions.len() - 1 }];
-					let direction = (previous_snail_position - position).normalized();
-					let speed = direction * self.state.speed;
-					let new_position = position + speed * self.state.timestep;
-					self.state.previous_positions[i].push(new_position);
-				}
 				let graph_points_raw = self.state.previous_positions[i].iter().map(|point| [point.x as f64, point.y as f64]).collect::<Vec<[f64; 2]>>();
 				let graph_points = egui::plot::Points::new(graph_points_raw.clone())
 					.color(colour)
@@ -86,12 +108,6 @@ impl Application {
 					egui::plot::Line::new(line_points).color(colour)
 				};
 				all_lines.push(snail_line);
-			}
-			for i in 0..self.state.positions.len() {
-				if self.state.previous_positions[i].is_empty() {
-					continue;
-				}
-				self.state.positions[i] = self.state.previous_positions[i][self.state.previous_positions[i].len() - 1];
 			}
 
 			// The n-agon

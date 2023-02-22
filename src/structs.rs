@@ -5,6 +5,7 @@ use eframe::epaint::Vec2;
 #[derive(Debug)]
 pub struct State {
 	pub running: bool,
+	pub steps_per_frame: usize,
 
 	pub snails_count: usize,
 	pub radius: f64,
@@ -49,6 +50,7 @@ impl Default for State {
 
 		Self {
 			running: false,
+			steps_per_frame: 1,
 
 			snails_count,
 			radius,
