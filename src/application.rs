@@ -72,7 +72,7 @@ impl Application {
 				ui.label("Simulation steps per frame");
 				ui.add_space(10.0);
 
-				let reset_button = ui.button("Reset the animation");
+				let reset_button = ui.button("Reset the simulation");
 
 				if self.state.snails_count != snails_count || self.state.radius != radius || reset_button.clicked() {
 					self.state.reinitialise();
