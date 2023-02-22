@@ -21,6 +21,34 @@ impl Application {
 
 	pub fn render(&mut self, ctx: &egui::Context) {
 		egui::CentralPanel::default().show(ctx, |ui| {
+			ui.horizontal(|ui| {
+				let run_pause_button = ui.button(if self.state.running { "Pause" } else { "Run" });
+				if run_pause_button.clicked() {
+					self.state.running = !self.state.running;
+				}
+
+				let snails_count = self.state.snails_count;
+				ui.add_enabled(!self.state.running, egui::DragValue::new(&mut self.state.snails_count).speed(0.1));
+				ui.label("Snails count");
+				
+				ui.add(egui::DragValue::new(&mut self.state.speed).speed(0.01));
+				ui.label("Snails speed");
+				
+				let radius = self.state.radius;
+				ui.add_enabled(!self.state.running, egui::DragValue::new(&mut self.state.radius).speed(0.01));
+				ui.label("Circle radius");
+				
+				ui.add(egui::DragValue::new(&mut self.state.timestep).speed(0.001));
+				ui.label("Timestep");
+				if self.state.timestep < 0.0 {
+					self.state.timestep = 0.0;
+				}
+
+				if self.state.snails_count != snails_count || self.state.radius != radius {
+					self.state.reinitialise();
+				}
+			});
+
 			let plot = egui::plot::Plot::new("Data").data_aspect(1.0);
 			// Circle
 			let n = 512;
@@ -33,21 +61,21 @@ impl Application {
 				})
 				.collect();
 			let circle_line = egui::plot::Line::new(circle_points).color(Color32::GRAY);
-
+			
 			// Snails
 			let mut all_points = vec![];
 			let mut all_lines = vec![];
 			for i in 0..self.state.positions.len() {
 				let colour = crate::COLOURS[i % crate::COLOURS.len()];
 				let position = self.state.positions[i];
-				if position.x.abs() < 10e-6 && position.y.abs() < 10e-6 {
-					continue;
+				
+				if self.state.running && position.length() >= self.state.speed * self.state.timestep {
+					let previous_snail_position = self.state.positions[if i > 0 { i - 1 } else { self.state.positions.len() - 1 }];
+					let direction = (previous_snail_position - position).normalized();
+					let speed = direction * self.state.speed;
+					let new_position = position + speed * self.state.timestep;
+					self.state.previous_positions[i].push(new_position);
 				}
-				let previous_snail_position = self.state.positions[if i > 0 { i - 1 } else { self.state.positions.len() - 1 }];
-				let direction = (previous_snail_position - position).normalized();
-				let speed = direction * self.state.speed;
-				let new_position = position + speed * self.state.timestep;
-				self.state.previous_positions[i].push(new_position);
 				let graph_points_raw = self.state.previous_positions[i].iter().map(|point| [point.x as f64, point.y as f64]).collect::<Vec<[f64; 2]>>();
 				let graph_points = egui::plot::Points::new(graph_points_raw.clone())
 					.color(colour)
@@ -60,6 +88,9 @@ impl Application {
 				all_lines.push(snail_line);
 			}
 			for i in 0..self.state.positions.len() {
+				if self.state.previous_positions[i].is_empty() {
+					continue;
+				}
 				self.state.positions[i] = self.state.previous_positions[i][self.state.previous_positions[i].len() - 1];
 			}
 

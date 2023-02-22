@@ -4,6 +4,8 @@ use eframe::epaint::Vec2;
 
 #[derive(Debug)]
 pub struct State {
+	pub running: bool,
+
 	pub snails_count: usize,
 	pub radius: f64,
 	pub speed: f32,
@@ -23,6 +25,16 @@ impl State {
 		}
 		positions
 	}
+
+	pub fn reinitialise(&mut self) {
+		let positions = Self::get_initial_positions(self.snails_count, self.radius);
+		let mut previous_positions = vec![];
+		for pos in &positions {
+			previous_positions.push(vec![*pos]);
+		}
+		self.positions = positions;
+		self.previous_positions = previous_positions;
+	}
 }
 
 impl Default for State {
@@ -30,15 +42,21 @@ impl Default for State {
 		let snails_count = 5;
 		let radius = 10.0;
 		let positions = Self::get_initial_positions(snails_count, radius);
+		let mut previous_positions = vec![];
+		for pos in &positions {
+			previous_positions.push(vec![*pos]);
+		}
 
 		Self {
+			running: false,
+
 			snails_count,
 			radius,
 			speed: 1.0,
 			timestep: 0.01,
 
 			positions,
-			previous_positions: vec![vec![]; snails_count]
+			previous_positions,
 		}
 	}
 }

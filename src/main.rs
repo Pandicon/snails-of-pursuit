@@ -17,7 +17,6 @@ pub const COLOURS: [egui::Color32; 5] = [
 fn main() {
 	dotenv::dotenv().ok();
 	let args = std::env::args().collect::<Vec<String>>();
-	println!("{} {}", REPOSITORY, VERSION);
 	let vsync_args = args.len() > 1 && args[1].to_lowercase() == *"--vsync-on";
 	let native_options = eframe::NativeOptions {
 		maximized: true,
