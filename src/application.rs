@@ -1,4 +1,4 @@
-use std::f64::consts::TAU;
+use std::{f64::consts::TAU, f32::consts::PI};
 
 use crate::structs::State;
 use eframe::{egui, epaint::Color32};
@@ -38,10 +38,41 @@ impl Application {
 		}
 	}
 
+	pub fn calculate(&mut self) {
+		let radius = self.state.radius as f32;
+		let beta = PI / 2.0 - PI / (self.state.snails_count as f32);
+		let inwards_speed = self.state.speed * beta.cos();
+		let tangential_speed = self.state.speed * beta.sin();
+		let time_to_take = radius / inwards_speed;
+		let time_points = (time_to_take / self.state.timestep).ceil() as usize;
+		let mut points = Vec::with_capacity(self.state.snails_count);
+		for i in 0..self.state.snails_count {
+			let mut snail_points = Vec::with_capacity(time_points);
+			let theta_offset = tangential_speed / inwards_speed * (radius).ln();
+			let theta_start = 2.0 * PI * (i as f32) / (self.state.snails_count as f32);
+			let mut t = 0.0;
+			while t < time_to_take {
+				let theta = theta_start + tangential_speed / inwards_speed * (radius - inwards_speed * t).ln() - theta_offset;
+				let r = radius - inwards_speed * t;
+				let (x, y) = theta.sin_cos();
+				snail_points.push(r * egui::Vec2::new(x, y));
+				t += self.state.timestep;
+			}
+			points.push(snail_points);
+		}
+		self.state.previous_positions = points;
+		for i in 0..self.state.positions.len() {
+			if self.state.previous_positions[i].is_empty() {
+				continue;
+			}
+			self.state.positions[i] = self.state.previous_positions[i][self.state.previous_positions[i].len() - 1];
+		}
+	}
+
 	pub fn render(&mut self, ctx: &egui::Context) {
 		egui::CentralPanel::default().show(ctx, |ui| {
 			ui.horizontal(|ui| {
-				let run_pause_button = ui.button(if self.state.running { "Pause" } else { "Run" });
+				let run_pause_button = ui.button(if self.state.running { "Pause the simulation" } else { "Run the simulation" });
 				if run_pause_button.clicked() {
 					self.state.running = !self.state.running;
 				}
@@ -71,8 +102,14 @@ impl Application {
 				ui.add(egui::DragValue::new(&mut self.state.steps_per_frame).speed(0.01));
 				ui.label("Simulation steps per frame");
 				ui.add_space(10.0);
+				
+				let calculate_button = ui.button("Calculate the paths");
+				ui.add_space(10.0);
+				if calculate_button.clicked() {
+					self.calculate();
+				}
 
-				let reset_button = ui.button("Reset the simulation");
+				let reset_button = ui.button("Reset the graph");
 
 				if self.state.snails_count != snails_count || self.state.radius != radius || reset_button.clicked() {
 					self.state.reinitialise();
