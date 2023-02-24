@@ -38,8 +38,10 @@ fn main() {
 
 impl eframe::App for application::Application {
 	fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-		for _ in 0..self.state.steps_per_frame {
-			self.step();
+		if self.state.running {
+			for _ in 0..self.state.steps_per_frame {
+				self.step();
+			}
 		}
 		self.render(ctx);
 		ctx.request_repaint();

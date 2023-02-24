@@ -20,15 +20,21 @@ impl Application {
 	}
 	
 	pub fn step(&mut self) {
+		let mut simulated_snails = 0;
 		for i in 0..self.state.positions.len() {
 			let position = self.state.positions[i];
-			if self.state.running && position.length() >= self.state.speed * self.state.timestep {
+			let too_close = position.length() < self.state.speed * self.state.timestep;
+			if !too_close {
+				simulated_snails += 1;
 				let previous_snail_position = self.state.positions[if i > 0 { i - 1 } else { self.state.positions.len() - 1 }];
 				let direction = (previous_snail_position - position).normalized();
 				let speed = direction * self.state.speed;
 				let new_position = position + speed * self.state.timestep;
 				self.state.previous_positions[i].push(new_position);
 			}
+		}
+		if simulated_snails == 0 {
+			self.state.running = false;
 		}
 		for i in 0..self.state.positions.len() {
 			if self.state.previous_positions[i].is_empty() {
