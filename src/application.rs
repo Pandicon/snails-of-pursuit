@@ -69,6 +69,7 @@ impl Application {
 		self.state.previous_positions = points;
 		for i in 0..self.state.positions.len() {
 			if self.state.previous_positions[i].is_empty() {
+				self.state.previous_positions[i].push(self.state.positions[i]);
 				continue;
 			}
 			self.state.positions[i] = self.state.previous_positions[i][self.state.previous_positions[i].len() - 1];
@@ -84,17 +85,18 @@ impl Application {
 				}
 				ui.add_space(10.0);
 
-				let snails_count = self.state.snails_count;
-				ui.add_enabled(!self.state.running, egui::DragValue::new(&mut self.state.snails_count).speed(0.1));
+				let snails_count_dragbox = ui.add_enabled(!self.state.running, egui::DragValue::new(&mut self.state.snails_count).speed(0.1));
 				ui.label("Snails count");
 				ui.add_space(10.0);
+				if self.state.snails_count < 1 {
+					self.state.snails_count = 1;
+				}
 				
 				ui.add(egui::DragValue::new(&mut self.state.speed).speed(0.01));
 				ui.label("Snails speed");
 				ui.add_space(10.0);
 				
-				let radius = self.state.radius;
-				ui.add_enabled(!self.state.running, egui::DragValue::new(&mut self.state.radius).speed(0.01));
+				let radius_dragbox = ui.add_enabled(!self.state.running, egui::DragValue::new(&mut self.state.radius).speed(0.01));
 				ui.label("Circle radius");
 				ui.add_space(10.0);
 				
@@ -115,10 +117,18 @@ impl Application {
 					self.calculate();
 				}
 
+				ui.checkbox(&mut self.state.recalculate_on_parametre_change, "Recalculate the paths automatically").on_hover_text("If checked, the paths will be automatically recalculated when the parameters are changed");
+
 				let reset_button = ui.button("Reset the graph");
 
-				if self.state.snails_count != snails_count || self.state.radius != radius || reset_button.clicked() {
+				if reset_button.clicked() {
 					self.state.reinitialise();
+				}
+				if snails_count_dragbox.changed() || radius_dragbox.changed() {
+					self.state.reinitialise();
+					if self.state.recalculate_on_parametre_change {
+						self.calculate();
+					}
 				}
 			});
 
