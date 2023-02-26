@@ -45,6 +45,9 @@ impl Application {
 	}
 
 	pub fn calculate(&mut self) {
+		if self.state.speed <= 0.0 {
+			return;
+		}
 		let radius = self.state.radius as f32;
 		let beta = PI / 2.0 - PI / (self.state.snails_count as f32);
 		let inwards_speed = self.state.speed * beta.cos();
@@ -92,18 +95,21 @@ impl Application {
 					self.state.snails_count = 1;
 				}
 				
-				ui.add(egui::DragValue::new(&mut self.state.speed).speed(0.01));
+				let snails_speed_dragbox = ui.add(egui::DragValue::new(&mut self.state.speed).speed(0.01));
 				ui.label("Snails speed");
 				ui.add_space(10.0);
 				
 				let radius_dragbox = ui.add_enabled(!self.state.running, egui::DragValue::new(&mut self.state.radius).speed(0.01));
 				ui.label("Circle radius");
 				ui.add_space(10.0);
+				if self.state.radius < 0.0 {
+					self.state.radius = 0.0;
+				}
 				
-				ui.add(egui::DragValue::new(&mut self.state.timestep).speed(0.001));
+				let timestep_dragbox = ui.add(egui::DragValue::new(&mut self.state.timestep).speed(0.001));
 				ui.label("Timestep");
-				if self.state.timestep < 0.0 {
-					self.state.timestep = 0.0;
+				if self.state.timestep <= 0.0 {
+					self.state.timestep = 0.0001;
 				}
 				ui.add_space(10.0);
 
@@ -111,7 +117,7 @@ impl Application {
 				ui.label("Simulation steps per frame");
 				ui.add_space(10.0);
 				
-				let calculate_button = ui.button("Calculate the paths");
+				let calculate_button = ui.add_enabled(self.state.speed > 0.0, egui::Button::new("Calculate the paths")).on_disabled_hover_text("The speed of the snails has to be positive to calculate the paths");
 				ui.add_space(10.0);
 				if calculate_button.clicked() {
 					self.calculate();
@@ -121,14 +127,11 @@ impl Application {
 
 				let reset_button = ui.button("Reset the graph");
 
-				if reset_button.clicked() {
+				if snails_count_dragbox.changed() || radius_dragbox.changed() || reset_button.clicked() {
 					self.state.reinitialise();
 				}
-				if snails_count_dragbox.changed() || radius_dragbox.changed() {
-					self.state.reinitialise();
-					if self.state.recalculate_on_parametre_change {
-						self.calculate();
-					}
+				if self.state.recalculate_on_parametre_change && (snails_count_dragbox.changed() || snails_speed_dragbox.changed() || radius_dragbox.changed() || timestep_dragbox.changed()) && self.state.speed > 0.0 {
+					self.calculate();
 				}
 			});
 
